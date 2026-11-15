@@ -3,17 +3,23 @@ namespace Kip;
 internal static class Program
 {
     [STAThread]
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
+        if (args is ["--hook"]) return PluginHook.Run();
+        if (args.Length > 0 && args[0] == "--wait") return MousePause.Wait(args);
+
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        using var single = new Mutex(true, @"Local\ChatGPT-KIP.Panel", out bool first);
-        if (!first) return;
+        using var single = new Mutex(true, PanelMutex, out bool first);
+        if (!first) return 0;
         string? requested = args.Length == 2 && args[0] == "--thread" ? args[1] : null;
         using var panel = new PanelContext(requested);
         Application.Run(panel);
+        return 0;
     }
+
+    internal const string PanelMutex = @"Local\ChatGPT-KIP.Panel";
 }
 
 internal sealed class PanelContext : ApplicationContext

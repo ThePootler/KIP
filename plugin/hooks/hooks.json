@@ -7,7 +7,7 @@
           {
             "type": "command",
             "statusMessage": "KIP: Follow mouse use and block a chat paused by Esc",
-            "command": "python -B -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'signal.py'),run_name='__main__')\"",
+            "command": "dotnet \"%PLUGIN_ROOT%/bin/KIP.dll\" --hook",
             "timeout": 4
           }
         ]
@@ -17,8 +17,8 @@
       {
         "hooks": [{
           "type": "command",
-          "statusMessage": "KIP: Resume mouse use on Ian's explicit request",
-          "command": "python -B -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'signal.py'),run_name='__main__')\"",
+          "statusMessage": "KIP: Resume mouse use on explicit request",
+          "command": "dotnet \"%PLUGIN_ROOT%/bin/KIP.dll\" --hook",
           "timeout": 4
         }]
       }

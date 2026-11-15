@@ -54,9 +54,9 @@ try
     reader = new ChatUpdates(file);
     reader.MarkDesktop(stamp, "Checking progress", "first");
     stamp = stamp.AddSeconds(12);
-    const string waitCommand = """python -B "C:\Codex\kip\0.4.0\wait.py" "C:\Local\ChatGPT-KIP\paused\chat" 45""";
+    const string waitCommand = """dotnet 'C:\Codex plugins\kip\bin\KIP.dll' --wait 'C:\Local\ChatGPT-KIP\paused\chat' 45""";
     File.AppendAllText(file, Line(new { type = "custom_tool_call", name = "exec",
-        input = $"text(await tools.exec_command({JsonSerializer.Serialize(new { cmd = waitCommand })}))".Replace("\\u0022", "\\\"") }, "response_item"));
+        input = $"text(await tools.exec_command({JsonSerializer.Serialize(new { cmd = waitCommand })}))".Replace("\\u0027", "'") }, "response_item"));
     reader.Read();
     var wait = reader.CurrentTask;
     Check(wait?.Started == stamp && wait.Elapsed(stamp.AddSeconds(65)) == "Wait  1:05", "A KIP wait should start its own clock");
@@ -73,6 +73,13 @@ try
         arguments = JsonSerializer.Serialize(new { cmd = waitCommand }) }, "response_item"));
     reader.Read();
     Check(reader.CurrentTask?.Label == "Wait" && reader.CurrentTask.Started == stamp, "A direct helper invocation must start the wait clock");
+    reader.MarkDesktop(stamp, "Checking an older chat", "third");
+    stamp = stamp.AddSeconds(1);
+    const string oldWait = """python -B "C:\Codex\kip\0.4.0\wait.py" "C:\Local\ChatGPT-KIP\paused\chat" 45""";
+    File.AppendAllText(file, Line(new { type = "function_call", name = "exec_command",
+        arguments = JsonSerializer.Serialize(new { cmd = oldWait }) }, "response_item"));
+    reader.Read();
+    Check(reader.CurrentTask?.Label == "Wait", "Existing transcripts must still recognise the old wait helper");
     var projects = new ProjectNames(file);
     File.WriteAllText(file, """{"local-projects":{"one":{"name":"The.Pootler"}},"thread-project-assignments":{"chat":{"projectKind":"local","projectId":"one"},"missing":{"projectKind":"local","projectId":"unknown"}},"projectless-thread-ids":["loose"]}""");
     var names = projects.Read();

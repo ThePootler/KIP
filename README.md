@@ -1,12 +1,14 @@
 # KIP · Keep It Progressing
 
+**[Download KIP 0.4.2 for Windows x64 (ready-built ZIP)](https://github.com/ThePootler/KIP/releases/download/v0.4.2/KIP-0.4.2-windows-x64.zip)**
+
 KIP automatically follows a local Codex chat that calls the Windows computer-use tools. Each red panel shows the owning sidebar project, the chat name, and the latest action or progress message. The top-right age is the time since that update. The bottom-right **Task** clock starts with each computer-use action. It reads **Wait** when KIP sees its wait helper, a Codex sleep call, or a progress message beginning with “Waiting for …” or “I’m waiting for …”. Progress during that wait leaves the clock running. A new action or newly declared wait reason starts it again. The footer reports the system-wide indicator state.
 
 KIP reads project names from Codex’s local sidebar assignments. **No project** means Codex explicitly lists the chat outside a project. **Project unknown** means KIP could identify the chat but could not resolve its project.
 
 ## Download and run on Windows
 
-1. [Download KIP 0.4.2 for Windows x64](https://github.com/ThePootler/KIP/releases/download/v0.4.2/KIP-0.4.2-windows-x64.zip) and choose **Extract All**.
+1. Right-click the downloaded ZIP and choose **Extract All**.
 2. Double-click **KIP.exe** in the extracted folder. KIP starts in the notification area and shows its panel when Codex uses the desktop. The download includes the .NET runtime. No SDK, Python or build step is needed.
 3. To let Codex follow desktop calls and enforce the Esc pause, double-click **Install Codex hooks.cmd** once. In **Codex → Settings → Hooks**, review and trust **KIP: Follow mouse use and block a chat paused by Esc** and **KIP: Resume mouse use on explicit request**.
 

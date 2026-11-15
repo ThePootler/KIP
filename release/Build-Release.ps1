@@ -30,6 +30,7 @@ foreach ($framework in $config.runtimeOptions.includedFrameworks) {
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$zip = Join-Path $work "KIP-$version-windows-x64.zip"
+# The README links to this filename on the latest GitHub release.
+$zip = Join-Path $work 'KIP-windows-x64.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
 Write-Output $zip

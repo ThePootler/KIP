@@ -1,6 +1,6 @@
 # KIP · Keep It Progressing
 
-**[Download KIP 0.4.2 for Windows x64 (ready-built ZIP)](https://github.com/ThePootler/KIP/releases/download/v0.4.2/KIP-0.4.2-windows-x64.zip)**
+**[Download the latest KIP for Windows x64 (ready-built ZIP)](https://github.com/ThePootler/KIP/releases/latest/download/KIP-windows-x64.zip)**
 
 KIP automatically follows a local Codex chat that calls the Windows computer-use tools. Each red panel shows the owning sidebar project, the chat name, and the latest action or progress message. The top-right age is the time since that update. The bottom-right **Task** clock starts with each computer-use action. It reads **Wait** when KIP sees its wait helper, a Codex sleep call, or a progress message beginning with “Waiting for …” or “I’m waiting for …”. Progress during that wait leaves the clock running. A new action or newly declared wait reason starts it again. The footer reports the system-wide indicator state.
 
@@ -42,4 +42,4 @@ When several chats have open desktop activity, KIP lists the projects and chats 
 
 Run `dotnet run --project tests/Kip.Checks.csproj -c Release` from the project root. The checks cover partial records, elapsed time, interrupted turns, switching between chats, simultaneous desktop activity, browser-only calls, waiting messages and the three indicator states. Run `./tests/Check-MousePause.ps1` in PowerShell to check the plugin commands, Esc pause, explicit resume and interruptible wait. Build and test output stays under `D:\CodexWork\ChatGPT-KIP`.
 
-To build the downloadable ZIP, run `./release/Build-Release.ps1` on Windows with the .NET 10 SDK.
+To build the downloadable ZIP, run `./release/Build-Release.ps1` on Windows with the .NET 10 SDK. Attach the resulting `KIP-windows-x64.zip` when publishing the GitHub release. The download link above follows the release marked **Latest**.

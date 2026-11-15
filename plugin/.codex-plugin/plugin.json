@@ -1,0 +1,9 @@
+{
+  "name": "kip",
+  "version": "0.4.0",
+  "description": "Follow local Codex computer use on the KIP Windows status panel.",
+  "interface": {
+    "displayName": "KIP · Keep It Progressing",
+    "shortDescription": "Show which Codex chat is using your Windows desktop."
+  }
+}

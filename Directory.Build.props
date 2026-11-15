@@ -1,0 +1,7 @@
+<Project>
+  <!-- Keep intermediates and binaries out of the OneDrive source tree. -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath Condition="'$(ArtifactsPath)' == ''">D:\CodexWork\ChatGPT-KIP\panel-build\artifacts</ArtifactsPath>
+  </PropertyGroup>
+</Project>

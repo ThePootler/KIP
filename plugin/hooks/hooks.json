@@ -7,7 +7,7 @@
           {
             "type": "command",
             "statusMessage": "KIP: Follow mouse use and block a chat paused by Esc",
-            "command": "dotnet \"%PLUGIN_ROOT%/bin/KIP.dll\" --hook",
+            "command": "powershell.exe -NoProfile -NonInteractive -Command \"dotnet ([Environment]::GetEnvironmentVariable('PLUGIN_ROOT') + '/bin/KIP.dll') --hook\"",
             "timeout": 4
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [{
           "type": "command",
           "statusMessage": "KIP: Resume mouse use on explicit request",
-          "command": "dotnet \"%PLUGIN_ROOT%/bin/KIP.dll\" --hook",
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"dotnet ([Environment]::GetEnvironmentVariable('PLUGIN_ROOT') + '/bin/KIP.dll') --hook\"",
           "timeout": 4
         }]
       }

@@ -18,7 +18,7 @@ function Start-CheckProcess($file, $arguments, $inputJson) {
     $info.EnvironmentVariables['PLUGIN_ROOT'] = $Package
     $info.EnvironmentVariables['LOCALAPPDATA'] = $work
     # Use only Windows and .NET commands, even when Python is installed on the test PC.
-    $info.EnvironmentVariables['PATH'] = "$env:SystemRoot\System32;$dotnetDir"
+    $info.EnvironmentVariables['PATH'] = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0;$dotnetDir"
     $process = [Diagnostics.Process]::Start($info)
     if ($inputJson) { $process.StandardInput.WriteLine($inputJson) }
     $process.StandardInput.Close()
@@ -39,7 +39,9 @@ function Read-Result($process, [int]$timeout = 4000) {
 function Invoke-Hook($event, $session, $fields) {
     $payload = @{ hook_event_name = $event; session_id = $session; turn_id = $turn } + $fields
     $command = $hooks.$event[0].hooks[0].command
-    $process = Start-CheckProcess $env:ComSpec "/d /c $command" ($payload | ConvertTo-Json -Depth 6 -Compress)
+    # The desktop launches hook commands with PowerShell, including the JSON on stdin.
+    $shellArgs = '-NoProfile -NonInteractive -Command "' + $command.Replace('"','\"') + '"'
+    $process = Start-CheckProcess $powerShell $shellArgs ($payload | ConvertTo-Json -Depth 6 -Compress)
     $answer = Read-Result $process
     if ($answer) { return ($answer | ConvertFrom-Json).hookSpecificOutput }
 }
@@ -49,6 +51,7 @@ function Invoke-Tool($inputFields, $session = $chat) {
 }
 
 $dotnetDir = Split-Path (Get-Command dotnet.exe).Source
+$powerShell = (Get-Process -Id $PID).Path
 try {
     if (-not $Package) {
         $Package = Join-Path $work "test user's plugin"

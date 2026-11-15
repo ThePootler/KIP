@@ -4,13 +4,19 @@ KIP automatically follows a local Codex chat that calls the Windows computer-use
 
 KIP reads project names from Codex’s local sidebar assignments. **No project** means Codex explicitly lists the chat outside a project. **Project unknown** means KIP could identify the chat but could not resolve its project.
 
-## Install the local Codex plugin
+## Download and run on Windows
+
+1. [Download KIP 0.4.2 for Windows x64](https://github.com/ThePootler/KIP/releases/download/v0.4.2/KIP-0.4.2-windows-x64.zip) and choose **Extract All**.
+2. Double-click **KIP.exe** in the extracted folder. KIP starts in the notification area and shows its panel when Codex uses the desktop. The download includes the .NET runtime. No SDK, Python or build step is needed.
+3. To let Codex follow desktop calls and enforce the Esc pause, double-click **Install Codex hooks.cmd** once. In **Codex → Settings → Hooks**, review and trust **KIP: Follow mouse use and block a chat paused by Esc** and **KIP: Resume mouse use on explicit request**.
+
+## Install the local Codex plugin from source
 
 Run `./Install-KIPPlugin.ps1` from this project on Windows with the .NET 10 SDK and the desktop Codex CLI available. The panel and both plugin hooks use the same .NET build. The plugin is `kip@kip-local`. In **Settings > Hooks**, review **KIP: Follow mouse use and block a chat paused by Esc** under **PreToolUse** and **KIP: Resume mouse use on explicit request** under **UserPromptSubmit**. [Codex hook review](https://learn.chatgpt.com/docs/hooks#plugin-bundled-hooks)
 
 The hook runs before a `cua_repl.js` call. For a recognised Windows call, it writes the chat ID (in the filename), turn ID, call ID, time and short action title into local application data and starts its bundled panel if needed. The running panel also reads desktop-call records directly, so existing chats can be followed while the hook awaits trust. Use `codex plugin remove kip@kip-local` to uninstall the plugin and **Exit KIP** to close a running panel.
 
-## Run
+## Run from source
 
 On Windows with the .NET 10 SDK installed, run `./Start-KIP.ps1` from PowerShell. The script builds the panel outside OneDrive and launches it. To open the existing build directly, run `D:\CodexWork\ChatGPT-KIP\panel-build\artifacts\bin\Kip\release\KIP.exe`. KIP runs for the current sign-in until you quit it.
 
@@ -33,3 +39,5 @@ When several chats have open desktop activity, KIP lists the projects and chats 
 ## Checks
 
 Run `dotnet run --project tests/Kip.Checks.csproj -c Release` from the project root. The checks cover partial records, elapsed time, interrupted turns, switching between chats, simultaneous desktop activity, browser-only calls, waiting messages and the three indicator states. Run `./tests/Check-MousePause.ps1` in PowerShell to check the plugin commands, Esc pause, explicit resume and interruptible wait. Build and test output stays under `D:\CodexWork\ChatGPT-KIP`.
+
+To build the downloadable ZIP, run `./release/Build-Release.ps1` on Windows with the .NET 10 SDK.

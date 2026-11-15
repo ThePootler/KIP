@@ -87,7 +87,7 @@ internal sealed partial class ChatUpdates(string path)
     // KIP's wait helper is invoked directly or through the Codex shell wrapper.
     // Commentary during a wait can change the message without restarting its clock.
     // Existing transcripts can still contain the 0.4.0 wait.py command.
-    [GeneratedRegex("""(?:\bdotnet(?:\.exe)?\s+[^\r\n]*?/KIP\.dll["']?\s+--wait|\bpython(?:\.exe)?\s+(?:-B\s+)?["']?[^"'\r\n]*/wait\.py["']?)\s+["']?[^\r\n]*?/ChatGPT-KIP/paused/""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("""(?:/KIP\.exe["']?\s+--wait|\bdotnet(?:\.exe)?\s+[^\r\n]*?/KIP\.dll["']?\s+--wait|\bpython(?:\.exe)?\s+(?:-B\s+)?["']?[^"'\r\n]*/wait\.py["']?)\s+["']?[^\r\n]*?/ChatGPT-KIP/paused/""", RegexOptions.IgnoreCase)]
     private static partial Regex WaitCommand();
 
     private static bool RunsKipWait(string command)

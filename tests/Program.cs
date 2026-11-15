@@ -70,7 +70,7 @@ try
     Check(reader.CurrentTask?.Label == "Task" && reader.CurrentTask.Started == stamp, "A new action with a reused title must restart the timer");
     stamp = stamp.AddSeconds(30);
     File.AppendAllText(file, Line(new { type = "function_call", name = "exec_command",
-        arguments = JsonSerializer.Serialize(new { cmd = waitCommand }) }, "response_item"));
+        arguments = JsonSerializer.Serialize(new { cmd = """& 'C:\Codex plugins\kip\bin\KIP.exe' --wait 'C:\Local\ChatGPT-KIP\paused\chat' 45 | Out-Host""" }) }, "response_item"));
     reader.Read();
     Check(reader.CurrentTask?.Label == "Wait" && reader.CurrentTask.Started == stamp, "A direct helper invocation must start the wait clock");
     reader.MarkDesktop(stamp, "Checking an older chat", "third");

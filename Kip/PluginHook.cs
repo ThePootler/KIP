@@ -74,11 +74,12 @@ internal static class PluginHook
         }
         finally { File.Delete(temp); }
 
+        string executable = Path.Combine(AppContext.BaseDirectory, "KIP.exe");
         if (Mutex.TryOpenExisting(Program.PanelMutex, out var panel)) panel.Dispose();
-        else Process.Start(new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "KIP.exe")) { UseShellExecute = true })?.Dispose();
+        else Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true })?.Dispose();
 
-        string assembly = typeof(PluginHook).Assembly.Location;
-        string command = $"dotnet {PowerShellQuote(assembly)} --wait {PowerShellQuote(marker)} SECONDS";
+        // A pipeline makes PowerShell wait for a Windows GUI executable and show its output.
+        string command = $"& {PowerShellQuote(executable)} --wait {PowerShellQuote(marker)} SECONDS | Out-Host";
         Reply(new { hookEventName = eventName, additionalContext =
             "Release desktop control whenever the work permits. When you need to wait while keeping this computer-use session open, " +
             $"publish the reason, then run this PowerShell command through the shell tool: {command}. " +

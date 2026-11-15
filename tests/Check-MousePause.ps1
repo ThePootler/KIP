@@ -17,8 +17,11 @@ function Start-CheckProcess($file, $arguments, $inputJson) {
     $info.RedirectStandardInput = $info.RedirectStandardOutput = $info.RedirectStandardError = $true
     $info.EnvironmentVariables['PLUGIN_ROOT'] = $Package
     $info.EnvironmentVariables['LOCALAPPDATA'] = $work
-    # Use only Windows and .NET commands, even when Python is installed on the test PC.
-    $info.EnvironmentVariables['PATH'] = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0;$dotnetDir"
+    $info.EnvironmentVariables['PATH'] = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+    if ($bundled) {
+        $info.EnvironmentVariables['DOTNET_ROOT_X64'] = Join-Path $work 'no-installed-runtime'
+        $info.EnvironmentVariables['DOTNET_BUNDLE_EXTRACT_BASE_DIR'] = Join-Path $work 'runtime'
+    }
     $process = [Diagnostics.Process]::Start($info)
     if ($inputJson) { $process.StandardInput.WriteLine($inputJson) }
     $process.StandardInput.Close()
@@ -50,7 +53,6 @@ function Invoke-Tool($inputFields, $session = $chat) {
     Invoke-Hook 'PreToolUse' $session @{ tool_name = 'mcp__cua_repl__js'; tool_use_id = 'test-call'; tool_input = $inputFields }
 }
 
-$dotnetDir = Split-Path (Get-Command dotnet.exe).Source
 $powerShell = (Get-Process -Id $PID).Path
 try {
     if (-not $Package) {
@@ -62,9 +64,13 @@ try {
         Copy-Item -LiteralPath (Join-Path $repo 'plugin\hooks') -Destination $Package -Recurse
     }
     $hooks = (Get-Content -Raw -LiteralPath "$Package\hooks\hooks.json" | ConvertFrom-Json).hooks
-    $dll = Join-Path $Package 'bin\KIP.dll'
-    $waitArgs = '"{0}" --wait "{1}"' -f $dll,$marker
-    $wait = Start-CheckProcess "$dotnetDir\dotnet.exe" "$waitArgs 30" $null
+    $exe = Join-Path $Package 'bin\KIP.exe'
+    $bundled = -not (Test-Path -LiteralPath (Join-Path $Package 'bin\KIP.dll'))
+    # The first hook also has to finish within Codex's timeout on a fresh installation.
+    $first = Invoke-Hook 'UserPromptSubmit' $chat @{ prompt = 'KIP resume mouse' }
+    if (-not $first.additionalContext) { throw 'Cold-start resume hook returned no reply.' }
+    $waitArgs = '--wait "{0}"' -f $marker
+    $wait = Start-CheckProcess $exe "$waitArgs 30" $null
     Start-Sleep -Milliseconds 250
     [IO.File]::WriteAllText($marker, '')
     if ((Read-Result $wait) -notlike 'PAUSED*') { throw 'Wait missed a new pause.' }
@@ -81,7 +87,7 @@ try {
     if (-not [IO.File]::Exists($marker)) { throw 'Another chat resumed this one.' }
     $null = Invoke-Hook 'UserPromptSubmit' $chat @{ prompt = ' KIP resume mouse ' }
     if ([IO.File]::Exists($marker) -or (Invoke-Tool $click)) { throw 'Explicit resume failed.' }
-    if ((Read-Result (Start-CheckProcess "$dotnetDir\dotnet.exe" "$waitArgs 0" $null)) -ne 'Wait elapsed.') { throw 'Wait did not expire.' }
+    if ((Read-Result (Start-CheckProcess $exe "$waitArgs 0" $null)) -ne 'Wait elapsed.') { throw 'Wait did not expire.' }
 
     # Stand in for the running tray panel so the test never opens a window.
     $panel = [Threading.Mutex]::new($false, 'Local\ChatGPT-KIP.Panel')
@@ -89,8 +95,11 @@ try {
         $reply = Invoke-Tool @{ code = 'await cua.getState()'; title = 'Read the desktop' }
         $receipt = Get-Content -LiteralPath "$work\ChatGPT-KIP\activity\$chat.json" -Raw | ConvertFrom-Json
         if ($receipt.turn -ne $turn -or $receipt.call -ne 'test-call' -or $receipt.title -ne 'Read the desktop') { throw 'Wrong activity receipt.' }
-        $expected = "dotnet '" + $dll.Replace("'","''") + "' --wait '" + $marker.Replace("'","''") + "' SECONDS"
+        $expected = "& '" + $exe.Replace("'","''") + "' --wait '" + $marker.Replace("'","''") + "' SECONDS | Out-Host"
         if (-not $reply.additionalContext.Contains($expected)) { throw 'Wrong wait command in hook reply.' }
+        $waitCommand = $expected.Replace(' SECONDS ', ' 0 ')
+        $shellArgs = '-NoProfile -NonInteractive -Command "' + $waitCommand + '"'
+        if ((Read-Result (Start-CheckProcess $powerShell $shellArgs $null)) -ne 'Wait elapsed.') { throw 'Suggested PowerShell wait failed.' }
     } finally { $panel.Dispose() }
     'Passed the installed hook commands, pause, resume, wait and activity receipt checks.'
 } finally {

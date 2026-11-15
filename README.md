@@ -42,4 +42,15 @@ When several chats have open desktop activity, KIP lists the projects and chats 
 
 Run `dotnet run --project tests/Kip.Checks.csproj -c Release` from the project root. The checks cover partial records, elapsed time, interrupted turns, switching between chats, simultaneous desktop activity, browser-only calls, waiting messages and the three indicator states. Run `./tests/Check-MousePause.ps1` in PowerShell to check the plugin commands, Esc pause, explicit resume and interruptible wait. Build and test output stays under `D:\CodexWork\ChatGPT-KIP`.
 
-To build the downloadable ZIP, run `./release/Build-Release.ps1` on Windows with the .NET 10 SDK. Attach the resulting `KIP-windows-x64.zip` when publishing the GitHub release. The download link above follows the release marked **Latest**.
+## Publish a release
+
+Tag the commit you want to release and push that tag to GitHub. For example, these commands publish 0.4.3 from the current commit.
+
+```sh
+git tag v0.4.3
+git push origin v0.4.3
+```
+
+GitHub Actions tests KIP, builds the Windows ZIP with the version from the tag, and publishes it on the release. The download link at the top follows the latest release. You can watch the build under [Actions → Release KIP for Windows](https://github.com/ThePootler/KIP/actions/workflows/release.yml).
+
+For a local build, run `./release/Build-Release.ps1` on Windows with the .NET 10 SDK. Use `-Version 0.4.3` to build that version explicitly.

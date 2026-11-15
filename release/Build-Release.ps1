@@ -1,16 +1,23 @@
 # Build the downloadable Windows x64 ZIP. Each run gets a clean staging folder.
-param([string]$WorkRoot = 'D:\CodexWork\ChatGPT-KIP\releases')
+param(
+    [string]$WorkRoot = 'D:\CodexWork\ChatGPT-KIP\releases',
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version
+)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$version = (Get-Content -LiteralPath "$repo\plugin\.codex-plugin\plugin.json" -Raw | ConvertFrom-Json).version
+$manifest = Get-Content -LiteralPath "$repo\plugin\.codex-plugin\plugin.json" -Raw -Encoding utf8 | ConvertFrom-Json
+if (-not $Version) { $Version = $manifest.version }
 $work = Join-Path $WorkRoot ([guid]::NewGuid().ToString())
 $stage = Join-Path $work 'package'
 $artifacts = Join-Path $work 'artifacts'
 dotnet publish "$repo\Kip\Kip.csproj" -c Release -r win-x64 --self-contained true --artifacts-path $artifacts -o $stage `
-    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false "-p:Version=$version" --nologo
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false "-p:Version=$Version" --nologo
 if ($LASTEXITCODE -ne 0) { throw 'KIP publish failed.' }
 
 Copy-Item -LiteralPath "$repo\plugin" -Destination $stage -Recurse
+# Codex reads the ZIP's plugin version from this manifest. Use the same version as KIP.exe.
+$manifest.version = $Version
+[IO.File]::WriteAllText("$stage\plugin\.codex-plugin\plugin.json", ($manifest | ConvertTo-Json -Depth 10))
 Copy-Item -LiteralPath "$repo\Install-KIPPlugin.ps1","$repo\README.md","$PSScriptRoot\Install Codex hooks.cmd" -Destination $stage
 
 # Ship the notices from the same runtime packs that went into the executable.

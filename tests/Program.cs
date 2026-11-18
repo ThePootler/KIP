@@ -50,6 +50,21 @@ try
         new Indicator(true, [new Rectangle(10, 10, 20, 20)]).Caption.EndsWith("visible"),
         "Indicator state overstates input ownership");
     AutoFollowChecks.Run(scratch);
+    DesktopRouteChecks.Run(scratch);
+    var indicatorTimer = new IndicatorTimer();
+    var visibleIndicator = new Indicator(true, [new Rectangle(0, 0, 100, 100)]);
+    var indicatorTime = indicatorTimer.Read(visibleIndicator, stamp);
+    Check(indicatorTime?.Elapsed(stamp.AddSeconds(65)) == "Indicator  1:05", "Unknown chat still needs an indicator clock");
+    Check(indicatorTimer.Read(visibleIndicator, stamp.AddMinutes(3)) == indicatorTime,
+        "Polling must not restart the indicator clock");
+    Check(indicatorTimer.Read(new Indicator(true, []), stamp.AddMinutes(4)) == null,
+        "An absent indicator must end its clock");
+    Check(indicatorTimer.Read(visibleIndicator, stamp.AddMinutes(5))?.Started == stamp.AddMinutes(5),
+        "A new indicator appearance must start a fresh clock");
+    Check(indicatorTimer.Read(new Indicator(false, []), stamp.AddMinutes(6)) == null,
+        "An unknown scan cannot establish continuous indicator visibility");
+    Check(indicatorTimer.Read(visibleIndicator, stamp.AddMinutes(7))?.Started == stamp.AddMinutes(7),
+        "Resume timing from the next confirmed observation");
     File.WriteAllText(file, "");
     reader = new ChatUpdates(file);
     reader.MarkDesktop(stamp, "Checking progress", "first");
@@ -88,6 +103,23 @@ try
     Check(projects.Read()["chat"] == "The.Pootler", "An incomplete sidebar write discarded a known project");
     File.WriteAllText(file, """{"local-projects":{"two":{"name":"KIP"}},"thread-project-assignments":{"chat":{"projectKind":"local","projectId":"two"}}}""");
     Check(projects.Read()["chat"] == "KIP" && !projects.Read().ContainsKey("loose"), "A moved chat kept its old project");
-    Console.WriteLine("Passed chat updates, project assignments, task and wait timers, interruptions, indicator and automatic chat following.");
+    using var menu = new ContextMenuStrip();
+    using var panel = new PanelWindow(menu);
+    var unknown = new FollowResult("Chat not identified",
+        new Update("Computer use", "Windows shows the indicator. KIP hasn't identified an active desktop chat.", null));
+    var observed = new DesktopTask("Indicator", stamp);
+    var screen = Screen.PrimaryScreen!;
+    panel.RefreshPanel(screen, unknown, null, visibleIndicator, ContentAlignment.TopCenter, stamp.AddHours(2), observed);
+    Check(panel.Controls.OfType<Label>().Any(label => label.Text == "Indicator  2:00:00" && label.Width > 0),
+        "The unknown-chat panel must display elapsed indicator time");
+    var identified = unknown with { Task = new DesktopTask("Wait", stamp.AddSeconds(30)) };
+    panel.RefreshPanel(screen, identified, null, visibleIndicator, ContentAlignment.TopCenter, stamp.AddSeconds(65), observed);
+    Check(panel.Controls.OfType<Label>().Any(label => label.Text == "Wait  0:35"),
+        "An identified chat must retain its own wait clock");
+    panel.RefreshPanel(screen, identified, "Could not read updates", visibleIndicator,
+        ContentAlignment.TopCenter, stamp.AddSeconds(65), observed);
+    Check(panel.Controls.OfType<Label>().Any(label => label.Text == "Indicator  1:05"),
+        "An update failure must still display the indicator clock");
+    Console.WriteLine("Passed chat updates, project assignments, task, wait and indicator timers, panel clocks, interruptions and automatic chat following.");
 }
 finally { File.Delete(file); }

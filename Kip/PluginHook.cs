@@ -45,9 +45,15 @@ internal static class PluginHook
                 Reply(new { hookEventName = eventName, additionalContext = Paused });
             return;
         }
-        if (eventName != "PreToolUse" || data.GetProperty("tool_name").GetString() != "mcp__cua_repl__js") return;
+        if (eventName != "PreToolUse") return;
+        string? tool = data.GetProperty("tool_name").GetString();
+        if (tool is not ("mcp__cua_repl__js" or "mcp__node_repl__js")) return;
         var input = data.GetProperty("tool_input");
         if (input.TryGetProperty("completion_summary", out _) && input.GetPropertyCount() == 1) return;
+        bool native = input.TryGetProperty("code", out var code) && DesktopCalls.IsNative(code.GetString());
+        // Node also runs calculations and file work. A mouse pause only blocks
+        // its recognised desktop calls, not unrelated JavaScript.
+        if (tool == "mcp__node_repl__js" && !native) return;
 
         // Check the pause even for browser calls or a click on a previously selected window.
         try
@@ -59,7 +65,7 @@ internal static class PluginHook
             Deny("KIP could not read this chat's mouse permission.");
             return;
         }
-        if (!input.TryGetProperty("code", out var code) || !DesktopCalls.IsNative(code.GetString())) return;
+        if (!native) return;
 
         string title = input.TryGetProperty("title", out var heading) ? heading.GetString() ?? "" : "";
         var receipt = new { turn = data.GetProperty("turn_id").GetGuid(), at = DateTimeOffset.UtcNow,

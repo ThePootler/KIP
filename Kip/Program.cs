@@ -35,6 +35,7 @@ internal sealed class PanelContext : ApplicationContext
     private readonly ToolStripMenuItem preferred = new("Show panels with computer-use indicator") { Checked = true, CheckOnClick = true };
     private readonly string? requested;
     private readonly AutoFollow tracker = new();
+    private readonly IndicatorTimer indicatorTimer = new();
     private readonly EscapeHandoff handoff;
     private Chat? activeDesktopChat;
     private bool reportedWatchFailure;
@@ -221,6 +222,8 @@ internal sealed class PanelContext : ApplicationContext
     {
         if (closed) return;
         var scan = Indicator.Read();
+        var now = DateTimeOffset.UtcNow;
+        var indicatorTime = indicatorTimer.Read(scan, now);
         bool visible = scan.Known && scan.Bounds.Count > 0;
         if (visible != overlayVisible)
         {
@@ -253,7 +256,6 @@ internal sealed class PanelContext : ApplicationContext
             windows[name].Dispose();
             windows.Remove(name);
         }
-        var now = DateTimeOffset.UtcNow;
         foreach (var screen in shown)
         {
             if (!windows.TryGetValue(screen.DeviceName, out var window))
@@ -261,7 +263,7 @@ internal sealed class PanelContext : ApplicationContext
                 window = new PanelWindow(menu) { Location = screen.WorkingArea.Location };
                 windows.Add(screen.DeviceName, window);
             }
-            window.RefreshPanel(screen, display, problem, scan, placement, now);
+            window.RefreshPanel(screen, display, problem, scan, placement, now, indicatorTime);
             if (!window.Visible) window.Show();
         }
     }

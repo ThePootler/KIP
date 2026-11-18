@@ -12,5 +12,6 @@
     <Compile Include="../Kip/Chats.cs" Link="Chats.cs" />
     <Compile Include="../Kip/ProjectNames.cs" Link="ProjectNames.cs" />
     <Compile Include="../Kip/Indicator.cs" Link="Indicator.cs" />
+    <Compile Include="../Kip/Panel.cs" Link="Panel.cs" />
   </ItemGroup>
 </Project>

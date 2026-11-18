@@ -32,7 +32,7 @@ internal sealed class PanelWindow : Form
         age.TextAlign = taskClock.TextAlign = ContentAlignment.MiddleRight;
         project.AutoEllipsis = message.AutoEllipsis = heading.AutoEllipsis = indicator.AutoEllipsis = true;
         tip.SetToolTip(age, "Time since the displayed update");
-        tip.SetToolTip(taskClock, "Elapsed time for this desktop action or wait");
+        tip.SetToolTip(taskClock, "Task/Wait times the chat's action. Indicator times the visible banner.");
     }
 
     protected override bool ShowWithoutActivation => true;
@@ -67,7 +67,7 @@ internal sealed class PanelWindow : Form
     }
 
     public void RefreshPanel(Screen screen, FollowResult display, string? problem, Indicator scan, ContentAlignment anchor,
-        DateTimeOffset now)
+        DateTimeOffset now, DesktopTask? indicatorTime = null)
     {
         float scale = DeviceDpi / 96f;
         int Px(int n) => (int)Math.Round(n * scale);
@@ -80,7 +80,9 @@ internal sealed class PanelWindow : Form
         heading.Text = chat;
         string elapsed = update.Time.HasValue ? update.Age(now) : "";
         if (age.Text != elapsed) age.Text = elapsed;
-        string taskTime = problem == null ? display.Task?.Elapsed(now) ?? "" : "";
+        // The visible banner still needs a clock when its owning chat is unknown.
+        var clock = problem == null ? display.Task ?? indicatorTime : indicatorTime;
+        string taskTime = clock?.Elapsed(now) ?? "";
         if (taskClock.Text != taskTime) taskClock.Text = taskTime;
         string text = update.Message;
         var footer = scan.Caption;

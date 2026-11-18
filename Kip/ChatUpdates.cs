@@ -106,6 +106,27 @@ internal sealed partial class ChatUpdates(string path)
         if (reason != null) waitReason = reason;
     }
 
+    private void ReadDesktopTool(string? toolNamespace, string? name, JsonElement input,
+        DateTimeOffset time, string? callId)
+    {
+        if (toolNamespace is not ("mcp__cua_repl" or "mcp__node_repl")) return;
+        if (name is "js_reset" or "turn_ended")
+        {
+            EndDesktop(time);
+            windows.Clear();
+            return;
+        }
+        if (name != "js" || input.ValueKind != JsonValueKind.Object) return;
+        if (input.TryGetProperty("completion_summary", out _)) { EndDesktop(time); return; }
+        if (!input.TryGetProperty("code", out var code) || code.GetString() is not string js) return;
+        string? title = input.TryGetProperty("title", out var heading) ? heading.GetString() : null;
+        if (DesktopCalls.IsNative(js, windows)) MarkDesktop(time, title, callId);
+        // CUA can call a helper on a selected window. Ordinary Node work must not
+        // replace the desktop message or restart its clock.
+        else if (toolNamespace == "mcp__cua_repl" && UsingDesktop && !string.IsNullOrWhiteSpace(title))
+            StartAction(time, title);
+    }
+
     public void Read()
     {
         using var file = Chats.Open(path);
@@ -185,6 +206,20 @@ internal sealed partial class ChatUpdates(string path)
                     TurnEnded = true;
                     Latest = new("Turn stopped", "The turn was interrupted.", time);
                     break;
+                case ("event_msg", "item_completed") when !TurnEnded && (currentTurn == null || currentTurn == turn):
+                    // Calls made through functions.exec have structured MCP events, not
+                    // direct function_call records. Read their real arguments, never tool output.
+                    if (payload.TryGetProperty("item", out var item) &&
+                        item.TryGetProperty("type", out var itemType) && itemType.GetString() == "McpToolCall" &&
+                        item.TryGetProperty("server", out var server) && item.TryGetProperty("tool", out var nestedTool) &&
+                        item.TryGetProperty("arguments", out var nestedInput))
+                    {
+                        var started = payload.TryGetProperty("started_at_ms", out var ms) && ms.TryGetInt64(out var value)
+                            ? DateTimeOffset.FromUnixTimeMilliseconds(value) : time;
+                        ReadDesktopTool("mcp__" + server.GetString(), nestedTool.GetString(), nestedInput, started,
+                            item.TryGetProperty("id", out var nestedId) ? nestedId.GetString() : null);
+                    }
+                    break;
                 case ("response_item", "function_call"):
                     if (UsingDesktop && payload.TryGetProperty("name", out var tool))
                     {
@@ -197,29 +232,12 @@ internal sealed partial class ChatUpdates(string path)
                                 BeginWait(time);
                         }
                     }
-                    if (payload.TryGetProperty("namespace", out var ns) && ns.GetString() == "mcp__cua_repl" &&
+                    if (payload.TryGetProperty("namespace", out var ns) && ns.GetString() is "mcp__cua_repl" or "mcp__node_repl" &&
                         payload.TryGetProperty("name", out var name))
                     {
-                        if (name.GetString() is "js_reset" or "turn_ended")
-                        {
-                            EndDesktop(time);
-                            windows.Clear();
-                        }
-                        if (name.GetString() == "js" && payload.TryGetProperty("arguments", out var args))
-                        {
-                            using var call = JsonDocument.Parse(args.GetString() ?? "{}");
-                            var input = call.RootElement;
-                            if (input.TryGetProperty("completion_summary", out _)) EndDesktop(time);
-                            else if (input.TryGetProperty("code", out var code) && code.GetString() is string js)
-                            {
-                                string? title = input.TryGetProperty("title", out var heading) ? heading.GetString() : null;
-                                if (DesktopCalls.IsNative(js, windows))
-                                    MarkDesktop(time, title, payload.TryGetProperty("call_id", out var id) ? id.GetString() : null);
-                                // A chat can call its own window helper, e.g. await buttons(). Show its
-                                // action title only inside an established desktop session. It cannot claim input.
-                                else if (UsingDesktop && !string.IsNullOrWhiteSpace(title)) StartAction(time, title);
-                            }
-                        }
+                        using var call = JsonDocument.Parse(payload.TryGetProperty("arguments", out var args) ? args.GetString() ?? "{}" : "{}");
+                        ReadDesktopTool(ns.GetString(), name.GetString(), call.RootElement, time,
+                            payload.TryGetProperty("call_id", out var id) ? id.GetString() : null);
                     }
                     break;
                 case ("response_item", "custom_tool_call") when UsingDesktop:

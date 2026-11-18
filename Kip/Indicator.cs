@@ -3,6 +3,18 @@ using System.Text;
 
 namespace Kip;
 
+internal sealed class IndicatorTimer
+{
+    private DesktopTask? visibleSince;
+
+    public DesktopTask? Read(Indicator indicator, DateTimeOffset now)
+    {
+        if (!indicator.Known || indicator.Bounds.Count == 0) visibleSince = null;
+        else visibleSince ??= new("Indicator", now);
+        return visibleSince;
+    }
+}
+
 internal sealed record Indicator(bool Known, List<Rectangle> Bounds)
 {
     public string Caption => !Known ? "Indicator unknown · control unconfirmed" :

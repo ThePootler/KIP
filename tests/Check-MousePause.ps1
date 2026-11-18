@@ -18,6 +18,7 @@ function Start-CheckProcess($file, $arguments, $inputJson) {
     $info.EnvironmentVariables['PLUGIN_ROOT'] = $Package
     $info.EnvironmentVariables['LOCALAPPDATA'] = $work
     $info.EnvironmentVariables['PATH'] = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+    if (-not $bundled) { $info.EnvironmentVariables['PATH'] += ";$env:ProgramFiles\dotnet" }
     if ($bundled) {
         $info.EnvironmentVariables['DOTNET_ROOT_X64'] = Join-Path $work 'no-installed-runtime'
         $info.EnvironmentVariables['DOTNET_BUNDLE_EXTRACT_BASE_DIR'] = Join-Path $work 'runtime'
@@ -49,8 +50,9 @@ function Invoke-Hook($event, $session, $fields) {
     if ($answer) { return ($answer | ConvertFrom-Json).hookSpecificOutput }
 }
 
-function Invoke-Tool($inputFields, $session = $chat) {
-    Invoke-Hook 'PreToolUse' $session @{ tool_name = 'mcp__cua_repl__js'; tool_use_id = 'test-call'; tool_input = $inputFields }
+function Invoke-Tool($inputFields, $session = $chat, $tool = 'mcp__cua_repl__js') {
+    if ($tool -notmatch $hooks.PreToolUse[0].matcher) { throw "The hook matcher misses $tool." }
+    Invoke-Hook 'PreToolUse' $session @{ tool_name = $tool; tool_use_id = 'test-call'; tool_input = $inputFields }
 }
 
 $powerShell = (Get-Process -Id $PID).Path
@@ -76,6 +78,11 @@ try {
     if ((Read-Result $wait) -notlike 'PAUSED*') { throw 'Wait missed a new pause.' }
     $click = @{ code = 'await editor.click([1, 1])' }
     if ((Invoke-Tool $click).permissionDecision -ne 'deny') { throw 'Paused click passed.' }
+    $sky = @{ code = 'await sky.click({window:selected, x:1, y:1})'; title = 'Direct desktop click' }
+    if ((Invoke-Tool $sky $chat 'mcp__node_repl__js').permissionDecision -ne 'deny') { throw 'Paused sky call passed.' }
+    foreach ($code in @('nodeRepl.write(2+2)', 'await browser.tabs.list()', 'const example = "sky.click()"')) {
+        if (Invoke-Tool @{ code = $code } $chat 'mcp__node_repl__js') { throw 'Mouse pause blocked ordinary Node work.' }
+    }
     if (Invoke-Tool $click $other) { throw 'Blocked a different chat.' }
     if (Invoke-Tool @{ completion_summary = 'Ended mouse use' }) { throw 'Blocked completion.' }
     if ((Invoke-Tool ($click + @{ completion_summary = 'Mixed' })).permissionDecision -ne 'deny') { throw 'Mixed input passed.' }
@@ -100,6 +107,11 @@ try {
         $waitCommand = $expected.Replace(' SECONDS ', ' 0 ')
         $shellArgs = '-NoProfile -NonInteractive -Command "' + $waitCommand + '"'
         if ((Read-Result (Start-CheckProcess $powerShell $shellArgs $null)) -ne 'Wait elapsed.') { throw 'Suggested PowerShell wait failed.' }
+        $reply = Invoke-Tool $sky $chat 'mcp__node_repl__js'
+        $receipt = Get-Content -LiteralPath "$work\ChatGPT-KIP\activity\$chat.json" -Raw | ConvertFrom-Json
+        if ($receipt.turn -ne $turn -or $receipt.title -ne 'Direct desktop click' -or -not $reply.additionalContext.Contains($expected)) {
+            throw 'Direct sky call did not report activity and supply the wait instruction.'
+        }
     } finally { $panel.Dispose() }
     'Passed the installed hook commands, pause, resume, wait and activity receipt checks.'
 } finally {

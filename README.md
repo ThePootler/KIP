@@ -16,7 +16,7 @@ KIP reads project names from Codex’s local sidebar assignments. **No project**
 
 Run `./Install-KIPPlugin.ps1` from this project on Windows with the .NET 10 SDK and the desktop Codex CLI available. The panel and both plugin hooks use the same .NET build. The plugin is `kip@kip-local`. In **Settings > Hooks**, review **KIP: Follow mouse use and block a chat paused by Esc** under **PreToolUse** and **KIP: Resume mouse use on explicit request** under **UserPromptSubmit**. [Codex hook review](https://learn.chatgpt.com/docs/hooks#plugin-bundled-hooks)
 
-The hook runs before a `cua_repl.js` call. For a recognised Windows call, it writes the chat ID (in the filename), turn ID, call ID, time and short action title into local application data and starts its bundled panel if needed. The running panel also reads desktop-call records directly, so existing chats can be followed while the hook awaits trust. Use `codex plugin remove kip@kip-local` to uninstall the plugin and **Exit KIP** to close a running panel.
+The hook runs before a `cua_repl.js` or `node_repl.js` call. For a recognised Windows call, it writes the chat ID (in the filename), turn ID, call ID, time and short action title into local application data and starts its bundled panel if needed. The running panel also reads desktop-call records directly, so existing chats can be followed while the hook awaits trust. Use `codex plugin remove kip@kip-local` to uninstall the plugin and **Exit KIP** to close a running panel. After upgrading the hooks, review and trust both entries again if Codex marks them modified.
 
 ## Run from source
 
@@ -32,9 +32,9 @@ With the native indicator visible and one identified desktop chat, KIP listens f
 
 When a desktop session must stay open during a wait, the hook supplies the chat with the command for KIP's interruptible wait. It checks the pause every tenth of a second. A third-party tool, ordinary sleep or mouse action already in flight can finish on its own schedule. The hook checks the pause before subsequent computer-use calls.
 
-KIP discovers recently updated local chats. A fresh hook receipt also identifies a chat whose transcript has an old file timestamp, which can happen while Codex keeps the file open on Windows. KIP initially reads up to 512 KiB of recent records per chat and then reads new data as it arrives. It recognises native window selection, Windows inventory and calls on a previously selected native window. Browser-tab calls, including from the same tool, and unrelated progress messages cannot select a new chat. A local chat can report desktop activity even while the Windows indicator is absent.
+KIP discovers recently updated local chats. A fresh hook receipt also identifies a chat whose transcript has an old file timestamp, which can happen while Codex keeps the file open on Windows. KIP initially reads up to 512 KiB of recent records per chat and then reads new data as it arrives. It recognises native window selection, Windows inventory and calls on a previously selected native window, plus direct Windows `sky` calls through `node_repl` (including calls made through `functions.exec`). Browser-tab calls, ordinary JavaScript and unrelated progress messages cannot select a new chat. The pause hook also covers recognised direct `sky` calls; it leaves unrelated Node work alone. A local chat can report desktop activity even while the Windows indicator is absent.
 
-When several chats have open desktop activity, KIP lists the projects and chats involved. If the Windows indicator is visible and KIP has no matching active chat, it shows **Chat not identified**. If a chat finished desktop use within the last minute, the panel names it as **Last to finish**. Both ambiguous states hide the task clock and leave per-chat Esc pausing disarmed. An already-open session whose identifying event predates the startup scan may remain unidentified until its next recognisable native call. Local record formats and overlay window classes are version-specific. See [the Windows investigation](WINDOWS-COMPUTER-CONTROL.md).
+When several chats have open desktop activity, KIP lists the projects and chats involved. If the Windows indicator is visible and KIP has no matching active chat, it shows **Chat not identified**. If a chat finished desktop use within the last minute, the panel names it as **Last to finish**. When a task clock is unavailable, an **Indicator** clock shows how long KIP has observed the current banner. It starts again after the indicator disappears, observation is interrupted or KIP restarts. Per-chat Esc pausing requires an identified active chat. An already-open session whose identifying event predates the startup scan may remain unidentified until its next recognisable native call. Local record formats and overlay window classes are version-specific. See [the Windows investigation](WINDOWS-COMPUTER-CONTROL.md).
 
 **Computer-use indicator visible** means Windows reports a visible native overlay. **Indicator absent · control unconfirmed** means the scan succeeded and found none. **Indicator unknown · control unconfirmed** means the scan failed or the input desktop was inaccessible. The overlay is PC-wide and can belong to another chat. KIP has no verified signal for return of input ownership.
 
@@ -44,11 +44,11 @@ Run `dotnet run --project tests/Kip.Checks.csproj -c Release` from the project r
 
 ## Publish a release
 
-Tag the commit you want to release and push that tag to GitHub. For example, these commands publish 0.4.3 from the current commit.
+Tag the commit you want to release and push that tag to GitHub. For example, these commands publish the next release, 0.4.4, from the current commit.
 
 ```sh
-git tag v0.4.3
-git push origin v0.4.3
+git tag v0.4.4
+git push origin v0.4.4
 ```
 
 GitHub Actions tests KIP, builds the Windows ZIP with the version from the tag, and publishes it on the release. The download link at the top follows the latest release. You can watch the build under [Actions → Release KIP for Windows](https://github.com/ThePootler/KIP/actions/workflows/release.yml).

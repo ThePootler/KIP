@@ -10,18 +10,23 @@ internal static partial class DesktopCalls
     private static partial Regex Literals();
     [GeneratedRegex(@"\bcua\s*\.\s*(?:(?:getApp|getState|listWindows|listApps)\s*\(|computer\s*\.\s*launch_app\s*\()")]
     private static partial Regex NativeApi();
+    // The Windows skill also calls sky directly through node_repl.
+    [GeneratedRegex(@"\bsky\s*\.\s*(?:list_windows|list_apps|get_window|get_window_state|launch_app|click|press_key|type_text|scroll|set_value|drag|perform_secondary_action|activate_window)\s*\(")]
+    private static partial Regex SkyApi();
     [GeneratedRegex(@"\b(?:const|let|var)\s+(?<name>[a-zA-Z_$][\w$]*)\s*=\s*await\s+cua\s*\.\s*getApp\s*\(")]
     private static partial Regex SelectedWindow();
     [GeneratedRegex(@"\b(?<name>[a-zA-Z_$][\w$]*)\s*\.\s*(?:pressKey|click|drag|scroll|paste|typeText|setValue|selectText|getAXState|getScreenshot|getAXStateAndScreenshot|performSecondaryAction)\s*\(")]
     private static partial Regex WindowAction();
     public static bool IsNative(string? code) =>
-        code != null && NativeApi().IsMatch(Literals().Replace(code, " "));
+        code != null && IsNativeCall(Literals().Replace(code, " "));
+
+    private static bool IsNativeCall(string code) => NativeApi().IsMatch(code) || SkyApi().IsMatch(code);
 
     public static bool IsNative(string code, HashSet<string> windows)
     {
         var calls = Literals().Replace(code, " ");
         foreach (Match m in SelectedWindow().Matches(calls)) windows.Add(m.Groups["name"].Value);
-        return NativeApi().IsMatch(calls) || WindowAction().Matches(calls)
+        return IsNativeCall(calls) || WindowAction().Matches(calls)
             .Any(m => windows.Contains(m.Groups["name"].Value));
     }
 }
